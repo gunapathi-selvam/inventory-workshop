@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build
+.next/
+out/
+dist/
+.turbo/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+packages/db/prisma/*.db
+
+# misc
+.DS_Store
+*.log
+coverage/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,27 @@
+{
+  "name": "workshop",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @workshop/db generate",
+    "db:migrate": "pnpm --filter @workshop/db migrate",
+    "db:push": "pnpm --filter @workshop/db push",
+    "db:seed": "pnpm --filter @workshop/db seed",
+    "db:studio": "pnpm --filter @workshop/db studio",
+    "setup:env": "node scripts/setup-env.mjs",
+    "setup": "pnpm install && pnpm run setup:env && pnpm db:generate && pnpm db:push && pnpm db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "prettier": "^3.4.2"
+  }
+}

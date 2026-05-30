@@ -1,0 +1,97 @@
+/*
+ * DESIGN TOKENS — the ONLY place raw style values live.
+ *
+ * Components never use literal colors/sizes; they use Tailwind utilities mapped
+ * to these variables (see preset.ts). Re-theme or re-brand the whole app (and
+ * the future mobile app, which can reuse these names) by editing this file.
+ *
+ * Colors use HSL channels (no hsl() wrapper) so Tailwind can apply opacity.
+ */
+
+:root {
+  /* Brand + semantic colors (H S% L%) */
+  --color-background: 0 0% 100%;
+  --color-foreground: 222 30% 12%;
+  --color-card: 0 0% 100%;
+  --color-card-foreground: 222 30% 12%;
+  --color-muted: 220 16% 96%;
+  --color-muted-foreground: 220 10% 44%;
+  --color-border: 220 16% 88%;
+  --color-input: 220 16% 88%;
+  --color-ring: 244 75% 58%;
+
+  --color-primary: 244 75% 58%;
+  --color-primary-foreground: 0 0% 100%;
+  --color-secondary: 220 16% 94%;
+  --color-secondary-foreground: 222 30% 16%;
+  --color-accent: 270 70% 60%;
+  --color-accent-foreground: 0 0% 100%;
+
+  --color-success: 152 60% 40%;
+  --color-success-foreground: 0 0% 100%;
+  --color-warning: 38 92% 50%;
+  --color-warning-foreground: 30 40% 14%;
+  --color-danger: 0 72% 51%;
+  --color-danger-foreground: 0 0% 100%;
+  --color-info: 210 90% 54%;
+  --color-info-foreground: 0 0% 100%;
+
+  /* Chart palette */
+  --color-chart-1: 244 75% 58%;
+  --color-chart-2: 152 60% 40%;
+  --color-chart-3: 38 92% 50%;
+  --color-chart-4: 270 70% 60%;
+  --color-chart-5: 0 72% 51%;
+
+  /* Radius scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Spacing scale (extends Tailwind defaults with named steps) */
+  --space-page: 1.5rem;
+  --space-section: 1.25rem;
+  --space-card: 1rem;
+
+  /* Typography */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 hsl(222 30% 12% / 0.05);
+  --shadow-md: 0 4px 12px -2px hsl(222 30% 12% / 0.08);
+  --shadow-lg: 0 12px 32px -8px hsl(222 30% 12% / 0.14);
+
+  /* Layout */
+  --sidebar-width: 16rem;
+  --header-height: 3.5rem;
+}
+
+.dark {
+  --color-background: 222 28% 9%;
+  --color-foreground: 220 16% 92%;
+  --color-card: 222 26% 12%;
+  --color-card-foreground: 220 16% 92%;
+  --color-muted: 222 20% 16%;
+  --color-muted-foreground: 220 12% 60%;
+  --color-border: 222 18% 22%;
+  --color-input: 222 18% 22%;
+  --color-ring: 244 75% 64%;
+
+  --color-primary: 244 75% 64%;
+  --color-primary-foreground: 222 28% 9%;
+  --color-secondary: 222 20% 18%;
+  --color-secondary-foreground: 220 16% 92%;
+  --color-accent: 270 70% 66%;
+  --color-accent-foreground: 222 28% 9%;
+
+  --color-success: 152 55% 46%;
+  --color-warning: 38 92% 56%;
+  --color-danger: 0 72% 58%;
+  --color-info: 210 90% 60%;
+
+  --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+  --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.4);
+  --shadow-lg: 0 12px 32px -8px hsl(0 0% 0% / 0.55);
+}

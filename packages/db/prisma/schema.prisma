@@ -1,0 +1,288 @@
+// Workshop data model.
+//
+// DB-portability: provider is SQLite now. To move to Postgres later, change
+// `provider` to "postgresql" and point DATABASE_URL at the new database — no
+// model changes required (we avoid SQLite-only features and store enums as
+// strings validated by @workshop/core constants, money as integer minor units).
+//
+// Conventions:
+//   * Every record table has createdAt / updatedAt and a soft-delete deletedAt.
+//   * `businessId` is present but unused for now — flips on multi-business
+//     scoping later with zero schema migration.
+//   * `customFields` holds runtime admin-defined fields (see FieldDefinition).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  businessId   String?
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("HANDLER") // ROLES
+  status       String    @default("ACTIVE") // USER_STATUS
+  customFields Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  overrides     UserPermissionOverride[]
+  createdOrders Order[]                  @relation("OrderCreatedBy")
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  stockMoves    StockMovement[]
+
+  @@index([role])
+  @@index([deletedAt])
+}
+
+model Customer {
+  id           String    @id @default(cuid())
+  businessId   String?
+  name         String
+  phone        String?
+  email        String?   @unique
+  address      String?
+  tier         String? // free-form / future segmentation
+  notes        String?
+  customFields Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  orders Order[]
+
+  @@index([name])
+  @@index([deletedAt])
+}
+
+model Filament {
+  id                String    @id @default(cuid())
+  businessId        String?
+  type              String // PLA / PETG / ABS / ...
+  color             String
+  // Money is integer minor units (paise). Rates are minor units PER GRAM.
+  sellRatePerGram   Int // selling price per gram (preset mode default)
+  costPerGram       Int // your material cost per gram (profit basis)
+  weightRemainingG  Float     @default(0) // grams in stock
+  spoolCount        Int       @default(0)
+  lowStockThresholdG Float    @default(0)
+  status            String    @default("ACTIVE")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  orderItems    OrderItem[]
+  stockMoves    StockMovement[]
+
+  @@index([type])
+  @@index([deletedAt])
+}
+
+model StockMovement {
+  id         String   @id @default(cuid())
+  filamentId String
+  filament   Filament @relation(fields: [filamentId], references: [id])
+  // grams delta: negative = consumed by order, positive = restock/adjustment
+  deltaG     Float
+  reason     String // ORDER, RESTOCK, ADJUSTMENT, CANCEL_RESTORE
+  orderId    String?
+  note       String?
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([filamentId])
+  @@index([orderId])
+}
+
+model Order {
+  id           String    @id @default(cuid())
+  businessId   String?
+  orderNumber  String    @unique
+  customerId   String
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  status       String    @default("DRAFT") // ORDER_STATUS
+  pricingMode  String    @default("PRESET") // PRICING_MODE
+
+  // All amounts in integer minor units (paise).
+  subtotal     Int       @default(0) // before discount
+  discountType String? // PERCENT | FLAT (null = none)
+  discountValue Int      @default(0) // percent*100 (e.g. 1500=15%) OR flat minor units
+  discountCodeId String?
+  discountAmount Int     @default(0) // resolved discount applied (minor units)
+  total        Int       @default(0) // subtotal - discountAmount
+  costTotal    Int       @default(0) // material cost (minor units)
+  profit       Int       @default(0) // total - costTotal
+
+  // Audit of a manual/override price (who/when), password verified server-side.
+  overrideUsed Boolean   @default(false)
+
+  // Fulfillment
+  deliveryDate DateTime?
+  paymentType  String? // PAYMENT_TYPE
+  courierName  String?
+  trackingId   String?
+  trackingUrl  String?
+
+  notes        String?
+  customFields Json?
+  createdById  String?
+  createdBy    User?     @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  stockApplied Boolean   @default(false) // guards against double stock decrement
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  items        OrderItem[]
+  discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id])
+
+  @@index([status])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([deliveryDate])
+  @@index([deletedAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name        String
+  filamentId  String?
+  filament    Filament? @relation(fields: [filamentId], references: [id])
+  gramsPerUnit Float    @default(0)
+  qty         Int      @default(1)
+  printHours  Float    @default(0)
+  // Per-item resolved economics (minor units), set by the pricing engine.
+  ratePerGram Int      @default(0) // rate actually used for this line
+  lineCost    Int      @default(0) // grams*qty*costPerGram
+  linePrice   Int      @default(0) // computed selling price for the line
+
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+  @@index([filamentId])
+}
+
+model DiscountCode {
+  id          String    @id @default(cuid())
+  businessId  String?
+  code        String    @unique
+  type        String // DISCOUNT_TYPE
+  value       Int // percent*100 OR flat minor units
+  active      Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  maxUses     Int? // null = unlimited
+  usedCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  orders Order[]
+
+  @@index([active])
+}
+
+// Role-based access defaults (editable matrix). Source of truth after seed.
+model RolePermission {
+  id            String  @id @default(cuid())
+  role          String // ROLES
+  permissionKey String
+  allowed       Boolean @default(false)
+
+  @@unique([role, permissionKey])
+  @@index([role])
+}
+
+// Per-user overrides — these WIN over the role default.
+model UserPermissionOverride {
+  id            String @id @default(cuid())
+  userId        String
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionKey String
+  effect        String // PERMISSION_OVERRIDE: ALLOW | DENY
+
+  @@unique([userId, permissionKey])
+  @@index([userId])
+}
+
+// Runtime custom-field definitions, managed from /settings/fields.
+model FieldDefinition {
+  id        String   @id @default(cuid())
+  entity    String // CUSTOM_FIELD_ENTITY: CUSTOMER | USER | ORDER
+  key       String // stable key stored inside customFields JSON
+  label     String
+  type      String // FIELD_TYPE
+  required  Boolean  @default(false)
+  options   Json? // for SELECT: string[]
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entity, key])
+  @@index([entity])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // NOTIFICATION_TYPE
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+// Key/value app settings (machine rate, labor defaults, override password hash,
+// currency, SMTP, etc). Values are JSON for flexibility.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// Tracks sensitive identity changes (name/email) on customers & users so an old
+// value can be looked up later. Surfaced via the History viewer.
+model ChangeHistory {
+  id          String   @id @default(cuid())
+  entity      String // CUSTOMER | USER
+  entityId    String
+  field       String // name | email
+  oldValue    String?
+  newValue    String?
+  changedById String?
+  createdAt   DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
