@@ -17,6 +17,15 @@ const prisma = new PrismaClient();
 
 const rs = (major: number) => Math.round(major * 100); // rupees -> paise
 
+/**
+ * Seed demo users/data only outside production. Override explicitly with
+ * SEED_DEMO=true|false. Production never gets the well-known demo logins or the
+ * `override123` price-override password.
+ */
+const SEED_DEMO = process.env.SEED_DEMO
+  ? process.env.SEED_DEMO === "true"
+  : process.env.NODE_ENV !== "production";
+
 async function seedPermissions() {
   for (const perm of PERMISSIONS) {
     for (const role of ROLES) {
@@ -31,15 +40,19 @@ async function seedPermissions() {
 }
 
 async function seedSettings() {
-  const overrideHash = await bcrypt.hash("override123", 10); // CHANGE in production
   const settings: Record<string, unknown> = {
     currency: DEFAULT_CURRENCY,
     machineRatePerHour: rs(20), // default machine time rate (paise/hour)
     defaultLaborFee: rs(0),
     defaultMarginPercent: 0, // percent*100
-    priceOverridePasswordHash: overrideHash,
     email: { enabled: false, from: "Workshop <no-reply@workshop.local>" },
   };
+  // Override password: demo value in dev; from env in prod; otherwise left unset
+  // so an admin configures it in Settings → Pricing (manual override stays gated).
+  const overridePlain = SEED_DEMO ? "override123" : process.env.PRICE_OVERRIDE_PASSWORD;
+  if (overridePlain) {
+    settings.priceOverridePasswordHash = await bcrypt.hash(overridePlain, 10);
+  }
   for (const [key, value] of Object.entries(settings)) {
     await prisma.setting.upsert({
       where: { key },
@@ -66,6 +79,20 @@ async function seedUsers() {
     created.push(user);
   }
   return created;
+}
+
+/** Production bootstrap: create a single admin from env (no demo accounts). */
+async function seedProductionAdmin(): Promise<boolean> {
+  const email = process.env.ADMIN_EMAIL;
+  const pass = process.env.ADMIN_PASSWORD;
+  if (!email || !pass) return false;
+  const passwordHash = await bcrypt.hash(pass, 10);
+  await prisma.user.upsert({
+    where: { email },
+    update: {},
+    create: { name: process.env.ADMIN_NAME ?? "Admin", email, role: "ADMIN", passwordHash },
+  });
+  return true;
 }
 
 async function seedFilaments() {
@@ -168,17 +195,30 @@ async function main() {
   console.log("Seeding…");
   await seedPermissions();
   await seedSettings();
-  const users = await seedUsers();
-  const admin = users.find((u) => u.role === "ADMIN")!;
-  const filaments = await seedFilaments();
-  const customers = await seedCustomers();
-  await seedDiscounts();
-  await seedOrders(customers, filaments, admin.id);
-  console.log("Seed complete.");
-  console.log("Logins:  admin@workshop.local / admin123");
-  console.log("         manager@workshop.local / manager123");
-  console.log("         handler@workshop.local / handler123");
-  console.log("Manual price override password: override123");
+
+  if (SEED_DEMO) {
+    const users = await seedUsers();
+    const admin = users.find((u) => u.role === "ADMIN")!;
+    const filaments = await seedFilaments();
+    const customers = await seedCustomers();
+    await seedDiscounts();
+    await seedOrders(customers, filaments, admin.id);
+    console.log("Seed complete (demo data included).");
+    console.log("Logins:  admin@workshop.local / admin123");
+    console.log("         manager@workshop.local / manager123");
+    console.log("         handler@workshop.local / handler123");
+    console.log("Manual price override password: override123");
+    return;
+  }
+
+  // Production: permissions + settings only, plus an optional admin from env.
+  const seededAdmin = await seedProductionAdmin();
+  console.log("Seed complete (production mode: permissions + settings; no demo data).");
+  console.log(
+    seededAdmin
+      ? "Admin created from ADMIN_EMAIL / ADMIN_PASSWORD."
+      : "No admin seeded — set ADMIN_EMAIL + ADMIN_PASSWORD to bootstrap one, then set the price-override password in Settings → Pricing.",
+  );
 }
 
 main()

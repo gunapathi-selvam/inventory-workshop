@@ -14,8 +14,10 @@ const ALG = "HS256";
 const ISSUER = "workshop";
 const AUDIENCE = "workshop-mobile";
 
-/** Default token lifetime; mobile re-logs in after this. */
-export const MOBILE_TOKEN_TTL = "30d";
+/** Default token lifetime; mobile re-logs in after this. Kept short to limit the
+ *  blast radius if a token leaks (there is no refresh/revocation yet — that's a
+ *  documented future enhancement in SECURITY.md). */
+export const MOBILE_TOKEN_TTL = "7d";
 
 function secretKey(): Uint8Array {
   return new TextEncoder().encode(env.AUTH_SECRET);
