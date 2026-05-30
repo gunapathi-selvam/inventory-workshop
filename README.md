@@ -44,9 +44,29 @@ pnpm install
 pnpm db:push
 pnpm db:seed
 
-# 3. Run
-pnpm dev          # http://localhost:3000
+# 3. Run the web app + API (http://localhost:3000)
+pnpm dev          # runs ONLY the web app/API (not Metro)
+
+# 4. Run the mobile app — in a SECOND terminal
+pnpm dev:mobile   # = pnpm --filter @workshop/mobile start (expo start --offline)
+#   then press i (iOS sim), a (Android emulator), or scan the QR with Expo Go
 ```
+
+> **Why two terminals?** Metro (the React Native bundler) is a long-running,
+> interactive process, so the mobile app is intentionally **not** part of
+> `pnpm dev`/`turbo run dev` — otherwise a Metro hiccup would take the web
+> server down with it. The mobile `start` script uses `expo start --offline`
+> to skip Expo's remote dependency-version check (which crashes on Node 24).
+
+**On a physical phone** (Expo Go), `localhost` points at the phone, so set your
+computer's LAN IP — the web app prints it on boot as the `Network` URL:
+
+```bash
+EXPO_PUBLIC_API_URL=http://192.168.1.6:3000 pnpm dev:mobile
+```
+
+See [`apps/mobile/README.md`](apps/mobile/README.md) for the mobile app's
+architecture and centralized design-token system.
 
 Environment files (already created for local dev):
 - `packages/db/.env` — `DATABASE_URL` for the Prisma CLI
