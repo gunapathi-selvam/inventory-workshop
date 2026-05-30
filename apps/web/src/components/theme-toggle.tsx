@@ -10,17 +10,30 @@ export function ThemeToggle() {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  const isDark = resolvedTheme === "dark";
+  const className =
+    "flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
+  // Before mount the resolved theme is unknown on the server/first paint. Render
+  // a theme-neutral placeholder so the SSR and client-hydration markup are
+  // identical (every theme-dependent attribute — aria-label, onClick, icon —
+  // must be gated, not just the icon).
+  if (!mounted) {
+    return (
+      <button type="button" aria-label="Toggle theme" className={className}>
+        <Sun className="size-4" />
+      </button>
+    );
+  }
+
+  const isDark = resolvedTheme === "dark";
   return (
     <button
       type="button"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className={className}
     >
-      {/* Render a stable icon until mounted to avoid SSR/CSR mismatch. */}
-      {mounted && isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
   );
 }
