@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { toErrorMessage } from "@workshop/core";
 import type { useToast } from "@workshop/ui";
 
 /** Debounce a fast-changing value (search inputs etc). */
@@ -27,6 +28,6 @@ export function mutationToast(
       if (opts.success) toast.success(opts.success);
       opts.onDone?.();
     },
-    onError: (e: { message: string }) => toast.error(opts.error ?? "Something went wrong", e.message),
+    onError: (e: unknown) => toast.error(opts.error ?? "Something went wrong", toErrorMessage(e)),
   };
 }

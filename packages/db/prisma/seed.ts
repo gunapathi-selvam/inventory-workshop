@@ -128,7 +128,10 @@ async function seedCustomers() {
     { name: "Design Studio 9", phone: "9000000003", email: "hi@ds9.test", tier: "Business" },
   ];
   const out = [];
-  for (const c of data) out.push(await prisma.customer.create({ data: c }));
+  // Upsert (by unique email) so the seed is idempotent / re-runnable.
+  for (const c of data) {
+    out.push(await prisma.customer.upsert({ where: { email: c.email }, update: {}, create: c }));
+  }
   return out;
 }
 

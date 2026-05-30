@@ -23,7 +23,6 @@ import {
 } from "@workshop/ui";
 import { api } from "~/trpc/react";
 import { useCan } from "~/lib/permissions-context";
-import { money } from "~/lib/format";
 
 interface FilForm {
   id?: string;

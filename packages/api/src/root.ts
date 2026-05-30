@@ -11,6 +11,7 @@ import { fieldRouter } from "./routers/field.js";
 import { notificationRouter } from "./routers/notification.js";
 import { dashboardRouter } from "./routers/dashboard.js";
 import { settingsRouter } from "./routers/settings.js";
+import { auditRouter } from "./routers/audit.js";
 
 /** The single app router — one sub-router (controller) per domain. */
 export const appRouter = router({
@@ -26,6 +27,7 @@ export const appRouter = router({
   notification: notificationRouter,
   dashboard: dashboardRouter,
   settings: settingsRouter,
+  audit: auditRouter,
 });
 
 export type AppRouter = typeof appRouter;

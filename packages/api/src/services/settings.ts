@@ -35,13 +35,18 @@ async function setRaw(key: string, value: unknown): Promise<void> {
 }
 
 export async function getPricingSettings(): Promise<PricingSettings> {
-  const [machineRatePerHour, defaultLaborFee, defaultMarginPercent, currency] = await Promise.all([
-    getRaw("machineRatePerHour", DEFAULTS.machineRatePerHour),
-    getRaw("defaultLaborFee", DEFAULTS.defaultLaborFee),
-    getRaw("defaultMarginPercent", DEFAULTS.defaultMarginPercent),
-    getRaw("currency", DEFAULTS.currency),
-  ]);
-  return { machineRatePerHour, defaultLaborFee, defaultMarginPercent, currency };
+  // Single round-trip for all four keys (was 4 separate findUnique calls; this
+  // runs on every order create/update/price-preview).
+  const rows = await prisma.setting.findMany({
+    where: { key: { in: ["machineRatePerHour", "defaultLaborFee", "defaultMarginPercent", "currency"] } },
+  });
+  const v = new Map(rows.map((r) => [r.key, r.value]));
+  return {
+    machineRatePerHour: (v.get("machineRatePerHour") as number) ?? DEFAULTS.machineRatePerHour,
+    defaultLaborFee: (v.get("defaultLaborFee") as number) ?? DEFAULTS.defaultLaborFee,
+    defaultMarginPercent: (v.get("defaultMarginPercent") as number) ?? DEFAULTS.defaultMarginPercent,
+    currency: (v.get("currency") as string) ?? DEFAULTS.currency,
+  };
 }
 
 export async function setPricingSettings(s: PricingSettings): Promise<void> {

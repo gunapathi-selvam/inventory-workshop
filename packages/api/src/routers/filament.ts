@@ -58,7 +58,13 @@ export const filamentRouter = router({
     .query(async ({ ctx, input }) => {
       const f = await ctx.prisma.filament.findFirst({
         where: { id: input.id, deletedAt: null },
-        include: { stockMoves: { orderBy: { createdAt: "desc" }, take: 20 } },
+        include: {
+          stockMoves: {
+            select: { id: true, deltaG: true, reason: true, note: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+            take: 20,
+          },
+        },
       });
       if (!f) throw errors.notFound("Filament");
       return { ...toApi(f), stockMoves: f.stockMoves };

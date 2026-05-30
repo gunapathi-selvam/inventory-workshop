@@ -1,9 +1,5 @@
 /**
- * Normalize any thrown value (tRPC client errors carry the server's normalized
- * AppError under data.appError) into a user-facing message string.
+ * Re-exports the shared error-message normalizer from @workshop/core so web and
+ * mobile surface tRPC/AppError messages identically.
  */
-export function toErrorMessage(err: unknown, fallback = "Something went wrong."): string {
-  if (!err) return fallback;
-  const e = err as { data?: { appError?: { message?: string } }; message?: string };
-  return e.data?.appError?.message ?? e.message ?? fallback;
-}
+export { toErrorMessage } from "@workshop/core";

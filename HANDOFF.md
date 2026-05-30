@@ -46,6 +46,36 @@ Working on **`D:\WORK\inventory-workshop`** (personal Windows PC that has **Andr
   `QUERY_CLIENT_OPTIONS` in `@workshop/core` (used by both tRPC clients); fixed a stale
   `useThemedStyles()` reference in the theme docstring + mobile README. Both apps typecheck clean.
 
+## Performance + feature pass (2026‑05‑31, later same day)
+Whole-app pass, landed safest-first; both apps typecheck clean and a backend smoke test passed
+(admin/handler login, permission gating, dashboard, audit).
+- **Page load:** `xlsx` (~150KB) is now lazy-loaded only when exporting
+  (`orders/page.tsx`); `recharts` (~44KB) moved to a `next/dynamic` `dashboard/charts.tsx` so it
+  ships only on the dashboard route.
+- **Backend speed:** the effective **permission map is resolved once per request** in the tRPC
+  context (`packages/api/src/trpc.ts`) — batched procedures read `ctx.permissions` via the new
+  `assertPermission()` instead of re-querying; removed the now-dead `can`/`requirePermission`.
+  `getPricingSettings` is 1 query (was 4). Detail endpoints use `select` not `include`
+  (order/customer/filament `byId`). Order export capped at 10k rows. Added DB indexes
+  (Order `[status,createdAt]` + `[discountCodeId]` FK, Notification `[userId,createdAt]`,
+  StockMovement/AuditLog `[userId]`, DiscountCode `[active,deletedAt]`) — applied via
+  `prisma db push`.
+- **Dashboard:** KPI sums/count now computed in SQL via `prisma.order.aggregate`; the daily-trend
+  bucketing stays in JS **on purpose** — there's no portable SQL date-truncation across SQLite
+  (now) and Postgres (later), and the schema avoids engine-specific raw SQL.
+- **Dedup/cleanup:** hoisted `dateShort`/`dateTime`/`titleCase` + `ORDER_STATUS_COLOR` into
+  `@workshop/core` (`format.ts`); shared `toErrorMessage()` in core (web now shows real server
+  error messages); removed dead `cuidLike`; enabled `noUnusedLocals`/`noUnusedParameters`.
+- **New feature — Audit log viewer (web, admin-only):** new permission `settings.audit`
+  (ADMIN by default), `audit.list` router, and `/settings/audit-log` page + settings tab.
+  **Re-seed needed** so existing DBs get the ADMIN row: `pnpm db:seed` (now idempotent — fixed a
+  customer-seed crash on re-run). The `AuditLog` table was already written by 6 routers; this only
+  adds the viewer. Mobile intentionally not included (admin tooling).
+- **Dependency upgrades:** `@trpc/*` rc.660 → **11.17.0 stable**; `next-auth` beta.25 → **beta.31**
+  (v5 is still beta upstream — do NOT "upgrade" to 4.x). No code changes were needed.
+- **Deferred:** converting web list/dashboard pages to React Server Components (faster first load)
+  — left for a future scoped update (see the `deferred-rsc-refactor` memory).
+
 ## Monorepo build gotchas (don't regress these)
 - **`.npmrc` uses `node-linker=hoisted`** — required for Metro/Expo under pnpm. Don't switch back to isolated.
 - **`apps/mobile/metro.config.js`** has a custom resolver mapping relative `*.js` imports → `.ts` sources (the shared packages use ESM `.js` specifiers).

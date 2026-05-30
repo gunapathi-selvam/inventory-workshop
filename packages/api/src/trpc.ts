@@ -11,15 +11,19 @@ import { ZodError } from "zod";
 import { prisma } from "@workshop/db";
 import {
   getCurrentUser,
-  requirePermission,
+  getEffectivePermissions,
+  assertPermission,
   verifyMobileToken,
   type SessionUser,
+  type PermissionMap,
 } from "@workshop/auth";
 import { toAppError, type PermissionKey } from "@workshop/core";
 
 export interface Context {
   user: SessionUser | null;
   prisma: typeof prisma;
+  /** Effective permission map, resolved once per request (null when no user). */
+  permissions: PermissionMap | null;
 }
 
 /**
@@ -32,7 +36,11 @@ export async function createContext(opts?: { token?: string | null }): Promise<C
   let user: SessionUser | null = null;
   if (opts?.token) user = await verifyMobileToken(opts.token);
   if (!user) user = await getCurrentUser();
-  return { user, prisma };
+  // Resolve permissions ONCE per request. tRPC batches several procedures into
+  // one HTTP request sharing this context, so every permissioned procedure reads
+  // this cached map instead of re-querying RolePermission + overrides each time.
+  const permissions = user ? await getEffectivePermissions(user.id, user.role) : null;
+  return { user, prisma, permissions };
 }
 
 const t = initTRPC.context<Context>().create({
@@ -88,10 +96,10 @@ const requireAuth = middleware(async ({ ctx, next }) => {
 export { baseProcedure };
 export const protectedProcedure = baseProcedure.use(requireAuth);
 
-/** Procedure factory enforcing a permission key. */
+/** Procedure factory enforcing a permission key (reads the per-request map). */
 export function permissionProcedure(key: PermissionKey) {
-  return protectedProcedure.use(async ({ ctx, next }) => {
-    await requirePermission(ctx.user, key);
+  return protectedProcedure.use(({ ctx, next }) => {
+    assertPermission(ctx.permissions, key);
     return next();
   });
 }

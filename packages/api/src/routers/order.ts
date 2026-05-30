@@ -16,7 +16,7 @@ import {
   changeOrderStatus,
   updateFulfillment,
 } from "../services/order.js";
-import { requirePermission } from "@workshop/auth";
+import { assertPermission } from "@workshop/auth";
 import { dateRange } from "../lib/query.js";
 
 /** Handlers only see orders they created; managers/admins see everything. */
@@ -76,7 +76,7 @@ export const orderRouter = router({
       const order = await ctx.prisma.order.findFirst({
         where: { id: input.id, deletedAt: null, ...scopeFor(ctx.user) },
         include: {
-          customer: true,
+          customer: { select: { id: true, name: true, phone: true, email: true } },
           items: { include: { filament: { select: { type: true, color: true } } } },
           createdBy: { select: { name: true } },
           discountCode: { select: { code: true } },
@@ -89,14 +89,14 @@ export const orderRouter = router({
   create: permissionProcedure("orders.create")
     .input(orderCreateSchema)
     .mutation(async ({ ctx, input }) => {
-      if (input.pricing.mode === "MANUAL") await requirePermission(ctx.user, "orders.priceOverride");
+      if (input.pricing.mode === "MANUAL") assertPermission(ctx.permissions, "orders.priceOverride");
       return createOrder(input, ctx.user);
     }),
 
   update: permissionProcedure("orders.edit")
     .input(orderUpdateSchema)
     .mutation(async ({ ctx, input }) => {
-      if (input.pricing?.mode === "MANUAL") await requirePermission(ctx.user, "orders.priceOverride");
+      if (input.pricing?.mode === "MANUAL") assertPermission(ctx.permissions, "orders.priceOverride");
       return updateOrder(input, ctx.user);
     }),
 
@@ -131,6 +131,7 @@ export const orderRouter = router({
         where,
         include: { customer: { select: { name: true, email: true, phone: true } } },
         orderBy: { createdAt: "desc" },
+        take: 10_000, // guardrail: cap a very wide date range from loading the whole table into memory
       });
       return rows.map((o) => ({
         orderNumber: o.orderNumber,

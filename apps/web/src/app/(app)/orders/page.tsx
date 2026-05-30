@@ -27,7 +27,6 @@ import { money, dateShort, STATUS_VARIANT } from "~/lib/format";
 import { DateRangeFilter, rangeToApi, type DateRangeValue } from "~/components/date-range";
 import { CustomerViewModal } from "~/components/customer-view-modal";
 import { useDebouncedValue } from "~/lib/hooks";
-import { exportToXlsx } from "~/lib/export-xlsx";
 
 export default function OrdersPage() {
   const toast = useToast();
@@ -58,6 +57,8 @@ export default function OrdersPage() {
         toast.error("Nothing to export", "No orders match the current filter.");
         return;
       }
+      // Lazy-load the xlsx wrapper (pulls in the heavy `xlsx` lib) only on export.
+      const { exportToXlsx } = await import("~/lib/export-xlsx");
       exportToXlsx(`orders-${new Date().toISOString().slice(0, 10)}.xlsx`, rows, "Orders");
       toast.success("Exported", `${rows.length} orders`);
     } catch (e) {

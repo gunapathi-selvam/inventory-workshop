@@ -1,28 +1,15 @@
-import { formatMoney as coreFormatMoney } from "@workshop/core";
+/**
+ * App-specific formatting wrappers. Shared, platform-agnostic helpers live in
+ * @workshop/core (dateShort, dateTime, ORDER_STATUS_COLOR).
+ */
+import { formatMoney } from "@workshop/core";
+
+export { dateShort, dateTime } from "@workshop/core";
 
 /** Format integer minor units (paise) as currency. */
 export function money(minor: number, currency = "INR"): string {
-  return coreFormatMoney(minor, currency);
+  return formatMoney(minor, currency);
 }
 
-export function dateShort(d: Date | string): string {
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-export function dateTime(d: Date | string): string {
-  return new Date(d).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-export const STATUS_VARIANT: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "info"> = {
-  DRAFT: "default",
-  CONFIRMED: "info",
-  PRINTING: "primary",
-  DONE: "success",
-  DELIVERED: "success",
-  CANCELLED: "danger",
-};
+/** Order status → Badge `variant` (shared single source of truth). */
+export { ORDER_STATUS_COLOR as STATUS_VARIANT } from "@workshop/core";

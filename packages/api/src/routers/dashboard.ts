@@ -12,11 +12,21 @@ export const dashboardRouter = router({
       const since = new Date();
       since.setDate(since.getDate() - days);
       const scope = ctx.user.role === "HANDLER" ? { createdById: ctx.user.id } : {};
+      const realizedWhere = { deletedAt: null, ...scope, status: { in: REALIZED }, createdAt: { gte: since } };
 
-      const [orders, statusCounts, lowStock, customerCount, recent] = await Promise.all([
+      const [kpiAgg, trendRows, statusCounts, lowStock, customerCount, recent] = await Promise.all([
+        // KPI totals computed in SQL — no order rows transferred for the sums/count.
+        ctx.prisma.order.aggregate({
+          where: realizedWhere,
+          _sum: { total: true, profit: true, costTotal: true },
+          _count: { _all: true },
+        }),
+        // Lean projection for the daily trend. Bucketing stays in JS: there is no
+        // portable SQL date-truncation across SQLite (now) and Postgres (later),
+        // and this schema deliberately avoids engine-specific raw SQL.
         ctx.prisma.order.findMany({
-          where: { deletedAt: null, ...scope, status: { in: REALIZED }, createdAt: { gte: since } },
-          select: { total: true, profit: true, costTotal: true, createdAt: true },
+          where: realizedWhere,
+          select: { total: true, profit: true, createdAt: true },
         }),
         ctx.prisma.order.groupBy({
           by: ["status"],
@@ -36,9 +46,9 @@ export const dashboardRouter = router({
         }),
       ]);
 
-      const revenue = orders.reduce((s, o) => s + o.total, 0);
-      const profit = orders.reduce((s, o) => s + o.profit, 0);
-      const cost = orders.reduce((s, o) => s + o.costTotal, 0);
+      const revenue = kpiAgg._sum.total ?? 0;
+      const profit = kpiAgg._sum.profit ?? 0;
+      const cost = kpiAgg._sum.costTotal ?? 0;
 
       // Daily trend buckets (minor units).
       const byDay = new Map<string, { revenue: number; profit: number; orders: number }>();
@@ -47,7 +57,7 @@ export const dashboardRouter = router({
         d.setDate(d.getDate() - i);
         byDay.set(d.toISOString().slice(0, 10), { revenue: 0, profit: 0, orders: 0 });
       }
-      for (const o of orders) {
+      for (const o of trendRows) {
         const key = o.createdAt.toISOString().slice(0, 10);
         const b = byDay.get(key);
         if (b) {
@@ -64,7 +74,7 @@ export const dashboardRouter = router({
           revenue,
           profit,
           cost,
-          orderCount: orders.length,
+          orderCount: kpiAgg._count._all,
           customerCount,
           lowStockCount: lowStockItems.length,
         },

@@ -61,6 +61,7 @@ export const PERMISSIONS = [
   { key: "settings.accessControl", label: "Manage access control", group: "Settings", page: "/settings/access-control", defaultRoles: ADMIN_ONLY },
   { key: "settings.fields", label: "Manage custom fields", group: "Settings", page: "/settings/fields", defaultRoles: ADMIN_ONLY },
   { key: "settings.pricing", label: "Manage pricing settings", group: "Settings", page: "/settings/pricing", defaultRoles: ADMIN_ONLY },
+  { key: "settings.audit", label: "View audit log", group: "Settings", page: "/settings/audit-log", defaultRoles: ADMIN_ONLY },
 ] as const satisfies readonly PermissionDef[];
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

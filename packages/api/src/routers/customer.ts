@@ -33,7 +33,13 @@ export const customerRouter = router({
     .query(async ({ ctx, input }) => {
       const customer = await ctx.prisma.customer.findFirst({
         where: { id: input.id, deletedAt: null },
-        include: { orders: { orderBy: { createdAt: "desc" }, take: 10 } },
+        include: {
+          orders: {
+            select: { id: true, orderNumber: true, createdAt: true, status: true, total: true },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+          },
+        },
       });
       if (!customer) throw errors.notFound("Customer");
       return customer;

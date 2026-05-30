@@ -1,5 +1,5 @@
 import { router, protectedProcedure, baseProcedure } from "../trpc.js";
-import { getEffectivePermissions, verifySecret, signMobileToken } from "@workshop/auth";
+import { verifySecret, signMobileToken } from "@workshop/auth";
 import { loginSchema } from "@workshop/validators";
 import { errors, type Role } from "@workshop/core";
 
@@ -24,8 +24,7 @@ export const authRouter = router({
   /** Current session user. */
   me: protectedProcedure.query(({ ctx }) => ctx.user),
 
-  /** Effective permission map for the current user (drives UI gating). */
-  myPermissions: protectedProcedure.query(({ ctx }) =>
-    getEffectivePermissions(ctx.user.id, ctx.user.role),
-  ),
+  /** Effective permission map for the current user (drives UI gating). Already
+   *  resolved once in the request context. */
+  myPermissions: protectedProcedure.query(({ ctx }) => ctx.permissions ?? {}),
 });

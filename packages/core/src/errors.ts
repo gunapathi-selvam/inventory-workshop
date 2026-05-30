@@ -106,3 +106,14 @@ export function toAppError(err: unknown): AppError {
 export function isAppError(err: unknown): err is AppError {
   return err instanceof AppError;
 }
+
+/**
+ * Normalize any thrown value into a user-facing message string. tRPC client
+ * errors carry the server's normalized AppError under `data.appError`; fall back
+ * to `.message`, then a generic message. Used by both the web and mobile UIs.
+ */
+export function toErrorMessage(err: unknown, fallback = "Something went wrong."): string {
+  if (!err) return fallback;
+  const e = err as { data?: { appError?: { message?: string } }; message?: string };
+  return e.data?.appError?.message ?? e.message ?? fallback;
+}

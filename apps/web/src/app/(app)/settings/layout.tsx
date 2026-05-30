@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, ListPlus, IndianRupee, type LucideIcon } from "lucide-react";
+import { ShieldCheck, ListPlus, IndianRupee, ScrollText, type LucideIcon } from "lucide-react";
 import { cn, PageHeader } from "@workshop/ui";
 import type { PermissionKey } from "@workshop/core";
 import { useCan } from "~/lib/permissions-context";
@@ -34,6 +34,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <Tab href="/settings/access-control" label="Access control" icon={ShieldCheck} perm="settings.accessControl" />
         <Tab href="/settings/fields" label="Custom fields" icon={ListPlus} perm="settings.fields" />
         <Tab href="/settings/pricing" label="Pricing" icon={IndianRupee} perm="settings.pricing" />
+        <Tab href="/settings/audit-log" label="Audit log" icon={ScrollText} perm="settings.audit" />
       </div>
       {children}
     </>

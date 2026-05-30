@@ -5,7 +5,6 @@
  */
 import { prisma } from "@workshop/db";
 import { errors, PERMISSION_KEYS, type PermissionKey, type Role } from "@workshop/core";
-import type { SessionUser } from "./index.js";
 
 export type PermissionMap = Record<string, boolean>;
 
@@ -31,13 +30,11 @@ export async function getEffectivePermissions(
   return result;
 }
 
-export async function can(userId: string, role: Role, key: PermissionKey): Promise<boolean> {
-  const map = await getEffectivePermissions(userId, role);
-  return map[key] ?? false;
-}
-
-/** Throws FORBIDDEN unless the user has the permission. */
-export async function requirePermission(user: SessionUser, key: PermissionKey): Promise<void> {
-  const allowed = await can(user.id, user.role, key);
-  if (!allowed) throw errors.forbidden(`Missing permission: ${key}`);
+/**
+ * Throws FORBIDDEN unless the (already-resolved) permission map grants the key.
+ * The map is resolved once per request in the tRPC context, so this is a cheap
+ * synchronous check rather than a fresh DB round-trip per procedure.
+ */
+export function assertPermission(map: PermissionMap | null | undefined, key: PermissionKey): void {
+  if (!map?.[key]) throw errors.forbidden(`Missing permission: ${key}`);
 }

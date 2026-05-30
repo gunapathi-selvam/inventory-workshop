@@ -101,6 +101,7 @@ model StockMovement {
 
   @@index([filamentId])
   @@index([orderId])
+  @@index([userId])
 }
 
 model Order {
@@ -146,7 +147,9 @@ model Order {
   discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id])
 
   @@index([status])
+  @@index([status, createdAt]) // dashboard + filtered list queries over a date range
   @@index([customerId])
+  @@index([discountCodeId]) // FK was unindexed
   @@index([createdAt])
   @@index([deliveryDate])
   @@index([deletedAt])
@@ -190,7 +193,7 @@ model DiscountCode {
 
   orders Order[]
 
-  @@index([active])
+  @@index([active, deletedAt])
 }
 
 // Role-based access defaults (editable matrix). Source of truth after seed.
@@ -246,6 +249,7 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+  @@index([userId, createdAt])
   @@index([createdAt])
 }
 
@@ -284,5 +288,6 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])
+  @@index([userId])
   @@index([createdAt])
 }
