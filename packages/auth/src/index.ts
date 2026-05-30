@@ -56,3 +56,4 @@ export async function requireUser(): Promise<SessionUser> {
 export { authConfig } from "./config.js";
 export * from "./permissions.js";
 export * from "./password.js";
+export * from "./token.js";

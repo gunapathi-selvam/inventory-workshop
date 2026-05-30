@@ -8,6 +8,11 @@ out/
 dist/
 .turbo/
 
+# expo / react-native
+.expo/
+.expo-export-test/
+*.hbc
+
 # env
 .env
 .env.local

@@ -9,7 +9,12 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { prisma } from "@workshop/db";
-import { getCurrentUser, requirePermission, type SessionUser } from "@workshop/auth";
+import {
+  getCurrentUser,
+  requirePermission,
+  verifyMobileToken,
+  type SessionUser,
+} from "@workshop/auth";
 import { toAppError, type PermissionKey } from "@workshop/core";
 
 export interface Context {
@@ -17,9 +22,16 @@ export interface Context {
   prisma: typeof prisma;
 }
 
-/** Builds the request context. `headers` reserved for future per-request needs. */
-export async function createContext(): Promise<Context> {
-  const user = await getCurrentUser();
+/**
+ * Builds the request context. Two auth paths share one context:
+ *   - web  → Auth.js session cookie (resolved by getCurrentUser)
+ *   - mobile → `Authorization: Bearer <token>` (resolved by verifyMobileToken)
+ * A valid bearer token wins; otherwise we fall back to the cookie session.
+ */
+export async function createContext(opts?: { token?: string | null }): Promise<Context> {
+  let user: SessionUser | null = null;
+  if (opts?.token) user = await verifyMobileToken(opts.token);
+  if (!user) user = await getCurrentUser();
   return { user, prisma };
 }
 

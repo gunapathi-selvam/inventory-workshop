@@ -22,6 +22,7 @@ businesses can reuse the same business logic later.
 ```
 apps/
   web/                Next.js app (UI + API route handlers)
+  mobile/             Expo / React Native app (see apps/mobile/README.md)
 packages/
   core/               errors (single module), env, logger, constants, permission registry, money
   db/                 Prisma schema, client, seed
@@ -165,8 +166,12 @@ fresh database with demo data.
 
 ## Future-proofing
 
-- **Mobile**: `packages/api` + `packages/validators` + `packages/ui` tokens are
-  framework-agnostic and reusable by an Expo/React Native app.
+- **Mobile**: shipped in `apps/mobile` — an Expo/React Native app that reuses
+  `packages/api` (same tRPC `AppRouter`), `packages/validators`, and
+  `packages/core`. It authenticates with a bearer token (the shared tRPC context
+  accepts either an Auth.js cookie or `Authorization: Bearer`) and has its own
+  centralized design-token system mirroring the web tokens. `pnpm dev` runs
+  only the web app/API; start the mobile app separately with `pnpm dev:mobile`.
 - **Multi-business**: every record carries a nullable `businessId` — enable tenant
   scoping later with no migration.
 - **Postgres**: change the Prisma datasource `provider` to `postgresql` and point

@@ -9,13 +9,15 @@
     ".": "./src/index.ts",
     "./config": "./src/config.ts",
     "./password": "./src/password.ts",
-    "./permissions": "./src/permissions.ts"
+    "./permissions": "./src/permissions.ts",
+    "./token": "./src/token.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next-auth": "5.0.0-beta.25",
+    "jose": "^5.9.0",
     "bcryptjs": "^2.4.3",
     "@workshop/core": "workspace:*",
     "@workshop/db": "workspace:*",

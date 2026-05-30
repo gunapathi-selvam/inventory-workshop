@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:mobile": "pnpm --filter @workshop/mobile start",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
