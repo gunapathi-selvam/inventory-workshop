@@ -38,12 +38,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const loginMutation = api.auth.login.useMutation();
 
-  // Restore the persisted token once on launch.
+  // Restore the persisted token once on launch. Must always resolve `token` to
+  // a string|null — if it stayed `undefined` (e.g. SecureStore throws on a
+  // device), `status` would hang on "loading" forever (white screen).
   React.useEffect(() => {
     (async () => {
-      const saved = await SecureStore.getItemAsync(TOKEN_KEY);
-      authToken.set(saved ?? null);
-      setToken(saved ?? null);
+      let saved: string | null = null;
+      try {
+        saved = await SecureStore.getItemAsync(TOKEN_KEY);
+      } catch (e) {
+        console.warn("SecureStore unavailable; continuing signed out.", e);
+      } finally {
+        authToken.set(saved ?? null);
+        setToken(saved ?? null);
+      }
     })();
   }, []);
 

@@ -19,3 +19,4 @@ export { ListRow } from "./ListRow";
 export { SearchBar } from "./SearchBar";
 export { FieldRow } from "./FieldRow";
 export { Chip } from "./Chip";
+export { ErrorBoundary } from "./ErrorBoundary";

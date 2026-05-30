@@ -1,35 +1,38 @@
-/**
- * Root layout — composes every provider and the themed navigation stack.
- *
- * Provider order matters: Theme (tokens) → SafeArea → tRPC (query client) →
- * Auth (needs the query client to call auth.login/me) → Permissions (needs auth).
- */
+// Must be the first import for react-native-gesture-handler to initialize
+// correctly (expo-router / react-navigation rely on it).
+import "react-native-gesture-handler";
+
 import * as React from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useRootNavigationState, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { View } from "react-native";
 import { ThemeProvider, useTheme } from "~/theme";
 import { TRPCProvider } from "~/api/trpc";
 import { AuthProvider, useAuth } from "~/api/auth";
 import { PermissionsProvider } from "~/lib/permissions";
-import { Spinner } from "~/components";
+import { ErrorBoundary, Spinner } from "~/components";
 
-/** Redirects between the auth flow and the app shell based on session status. */
+/** Redirects between the auth flow and the app shell based on session status.
+ *  Waits for the navigator to be mounted before navigating (calling replace()
+ *  too early throws the Expo Go "Something went wrong" error). */
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navState = useRootNavigationState();
+  const navReady = !!navState?.key;
 
   React.useEffect(() => {
-    if (status === "loading") return;
+    if (!navReady || status === "loading") return;
     const inAuthFlow = segments[0] === "login";
     if (status === "unauthenticated" && !inAuthFlow) {
       router.replace("/login");
     } else if (status === "authenticated" && inAuthFlow) {
       router.replace("/(tabs)/dashboard");
     }
-  }, [status, segments, router]);
+  }, [navReady, status, segments, router]);
 
   if (status === "loading") {
     return <Spinner label="Loading…" />;
@@ -68,16 +71,20 @@ function ThemedNavigator() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <TRPCProvider>
-          <AuthProvider>
-            <PermissionsProvider>
-              <ThemedNavigator />
-            </PermissionsProvider>
-          </AuthProvider>
-        </TRPCProvider>
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <TRPCProvider>
+              <AuthProvider>
+                <PermissionsProvider>
+                  <ThemedNavigator />
+                </PermissionsProvider>
+              </AuthProvider>
+            </TRPCProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

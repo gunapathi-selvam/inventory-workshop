@@ -55,8 +55,14 @@ pnpm dev:mobile   # = pnpm --filter @workshop/mobile start (expo start --offline
 > **Why two terminals?** Metro (the React Native bundler) is a long-running,
 > interactive process, so the mobile app is intentionally **not** part of
 > `pnpm dev`/`turbo run dev` — otherwise a Metro hiccup would take the web
-> server down with it. The mobile `start` script uses `expo start --offline`
-> to skip Expo's remote dependency-version check (which crashes on Node 24).
+> server down with it. The mobile `start` script sets
+> `EXPO_NO_DEPENDENCY_VALIDATION=1` to skip Expo's remote dependency-version
+> check (which crashes on Node 24) while staying online for Expo Go.
+>
+> If Expo Go shows **"Something went wrong"**, the phone can't reach your
+> computer — check same Wi-Fi + Windows Firewall, or use a tunnel:
+> `pnpm --filter @workshop/mobile run start:tunnel`. See
+> [`apps/mobile/README.md`](apps/mobile/README.md#troubleshooting-expo-go-says-something-went-wrong).
 
 **On a physical phone** (Expo Go), `localhost` points at the phone, so set your
 computer's LAN IP — the web app prints it on boot as the `Network` URL:

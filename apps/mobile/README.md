@@ -62,7 +62,13 @@ entirely from these tokens and is what screens compose.
 - **Access control** — tabs and actions hide based on the user's effective
   permissions (`useCan`); the server still enforces every permission.
 
-## Running it
+## Build an installable APK (recommended for device testing)
+
+To run on a real phone or emulator **without** Expo Go / Metro / tunnels, build a
+standalone APK locally (needs Android Studio's SDK). Full step-by-step:
+[**BUILD_ANDROID.md**](BUILD_ANDROID.md).
+
+## Running it (dev server / Expo Go)
 
 Prerequisites: the repo is installed (`pnpm install` at the root) and the web
 app is running so the API is reachable.
@@ -78,10 +84,32 @@ pnpm dev:mobile     # alias for: pnpm --filter @workshop/mobile start
 #   then press i (iOS sim), a (Android), or scan the QR with Expo Go
 ```
 
-> The mobile `start` script runs `expo start --offline`. Offline mode skips
-> Expo's remote dependency-version check, which crashes on Node 24 with a
-> `Body is unusable` undici error. Metro and LAN device connections work
-> normally offline.
+> The mobile `start` script runs `expo start` with `EXPO_NO_DEPENDENCY_VALIDATION=1`
+> (via `cross-env`, for Windows). That flag skips only Expo's remote
+> dependency-version check — which crashes on Node 24 with a `Body is unusable`
+> undici error — while keeping the dev server fully online so Expo Go gets a
+> normal manifest. (Avoid `--offline`: it serves an anonymous manifest that
+> Expo Go can reject with "Something went wrong".)
+
+### Troubleshooting: Expo Go says "Something went wrong"
+
+Almost always the phone can't reach Metro/the API. In order:
+
+1. **Same Wi-Fi** — phone and computer must be on the same network (not a guest
+   network that isolates clients).
+2. **Windows Firewall** — allow Node.js through it, or the phone can't reach
+   Metro (port 8081) or the API (port 3000) over the LAN even though they work
+   from the computer itself. Quick test from the phone's browser: open
+   `http://<your-LAN-IP>:8081` — you should get a Metro response.
+3. **Use a tunnel** (bypasses LAN/firewall entirely):
+   ```bash
+   pnpm --filter @workshop/mobile run start:tunnel
+   ```
+   First run installs `@expo/ngrok` when prompted. The tunnel only carries
+   Metro — for the API, still set `EXPO_PUBLIC_API_URL` to a host the phone can
+   reach.
+4. Tap **"Show error details"** in Expo Go and check the **Metro terminal**: a
+   JS stack trace points at app code; a connection/timeout message points at 1–3.
 
 ### Pointing the app at your API
 
