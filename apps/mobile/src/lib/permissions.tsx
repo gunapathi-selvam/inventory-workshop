@@ -19,7 +19,13 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     enabled: status === "authenticated",
     staleTime: 5 * 60_000,
   });
-  const map = (query.data as PermissionMap | undefined) ?? {};
+  // Memoize so the context value is stable across renders where the permission
+  // data hasn't changed — otherwise every `useCan()` consumer re-renders. (The
+  // web PermissionsProvider already does this.)
+  const map = React.useMemo(
+    () => (query.data as PermissionMap | undefined) ?? {},
+    [query.data],
+  );
   return <PermissionsContext.Provider value={map}>{children}</PermissionsContext.Provider>;
 }
 

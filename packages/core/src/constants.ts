@@ -60,3 +60,12 @@ export const PERMISSION_OVERRIDE = ["ALLOW", "DENY"] as const;
 export type PermissionOverride = (typeof PERMISSION_OVERRIDE)[number];
 
 export const DEFAULT_CURRENCY = "INR";
+
+/**
+ * Default React Query options shared by the web and mobile tRPC clients so both
+ * apps cache and retry identically. Plain object (no react-query import) — it's
+ * structurally compatible with `QueryClient`'s `defaultOptions`.
+ */
+export const QUERY_CLIENT_OPTIONS = {
+  queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false },
+};

@@ -5,6 +5,7 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import { Button } from "@workshop/ui";
 import { useSession } from "~/lib/permissions-context";
 import { NotificationBell } from "./notification-bell";
+import { ThemeToggle } from "./theme-toggle";
 
 export function Topbar() {
   const user = useSession();
@@ -12,6 +13,7 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-header items-center justify-end gap-2 border-b border-border bg-card/80 px-page backdrop-blur">
+      <ThemeToggle />
       <NotificationBell />
       <div className="relative">
         <button

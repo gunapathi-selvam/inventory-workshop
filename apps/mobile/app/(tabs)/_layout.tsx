@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/theme";
 import { useCan } from "~/lib/permissions";
 
@@ -16,6 +17,7 @@ function tabIcon(name: IconName) {
 
 export default function TabsLayout() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const canOrders = useCan("orders.view");
   const canCustomers = useCan("customers.view");
   const canInventory = useCan("inventory.view");
@@ -29,11 +31,14 @@ export default function TabsLayout() {
         headerShadowVisible: false,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.mutedForeground,
+        // Add the bottom safe-area inset to the bar's height and padding so the
+        // tab icons/labels sit ABOVE the Android system nav buttons (Expo SDK 53
+        // draws edge-to-edge by default, so without this the bar is occluded).
         tabBarStyle: {
           backgroundColor: theme.colors.card,
           borderTopColor: theme.colors.border,
-          height: theme.sizing.layout.tabBarHeight,
-          paddingBottom: theme.spacing.sm,
+          height: theme.sizing.layout.tabBarHeight + insets.bottom,
+          paddingBottom: theme.spacing.sm + insets.bottom,
           paddingTop: theme.spacing.xs,
         },
         tabBarLabelStyle: { fontSize: theme.typography.fontSize.xs },

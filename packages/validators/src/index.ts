@@ -16,7 +16,6 @@ import {
 } from "@workshop/core";
 
 export const idSchema = z.string().min(1);
-export const cuidLike = z.string().min(1);
 
 export const paginationSchema = z.object({
   page: z.number().int().min(1).default(1),

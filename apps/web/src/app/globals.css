@@ -15,4 +15,22 @@
     background-color: hsl(var(--color-background));
     color: hsl(var(--color-foreground));
   }
+
+  /* Seamless light/dark switch: animate only color properties. next-themes sets
+     the .dark class before first paint, so this never fires on initial load. */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0ms;
+    }
+  }
 }

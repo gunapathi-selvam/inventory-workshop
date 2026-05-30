@@ -35,7 +35,7 @@ src/theme/
   opacity.ts      # interaction/emphasis opacity tokens
   motion.ts       # animation durations + easings
   theme.ts        # assembles light/dark Theme objects
-  ThemeProvider.tsx  # provider + useTheme() / useThemedStyles()
+  ThemeProvider.tsx  # provider + useTheme(); persists the light/dark choice
   index.ts        # public surface — import everything from "~/theme"
 ```
 
