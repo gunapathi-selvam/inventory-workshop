@@ -2,14 +2,41 @@
 
 Paste this into a new chat (or say: "read HANDOFF.md") to continue without losing context.
 
+## CURRENT STATUS (as of 2026‑05‑31)
+Everything is **working**. Web + mobile both run; web `next build` passes; all 8 packages
+typecheck clean. Recent sessions delivered: persisted dark/light mode (web + mobile), a mobile
+bottom-nav fix, a whole-app performance pass, an admin **audit-log** feature, dependency upgrades
+(`@trpc/*` → 11.17 stable), and a **full RSC refactor** of the read-dominant web pages. Details in
+the dated sections below.
+
+**Known good versions / pins:** Node 20 LTS (24 works for web but breaks Expo CLI — see gotchas);
+React is pinned to **19.0.0** workspace-wide via `pnpm.overrides` (do NOT bump past 19.0.0 — RN 0.79
+requires it); `expo-router ~5.1.11`, `react-native 0.79.6`, `react-native-screens ~4.11.1`.
+
+**To sync these changes to another machine:** `git pull` → `pnpm install` (deps + React pin
+changed) → `pnpm db:generate` → `pnpm db:push` (new indexes) → enable the "View audit log"
+permission in Settings → Access control (or `pnpm db:seed` on a throwaway DB) → restart (mobile
+with `-c`).
+
+**Suggested next steps (none urgent):** (1) deploy the Next.js backend to hosted Postgres + a public
+https URL — this is what unblocks real APK sharing / multi-user (LAN access is firewall-blocked
+here); (2) mobile distribution via EAS Build + add `expo-updates` for OTA upgrades; (3) optional:
+finish full-RSC on the remaining form pages (see `deferred-rsc-refactor` memory). Pick per priority.
+
 ## What this project is
 A **Turborepo + pnpm monorepo** ("Workshop" — a 3D‑printing workshop manager).
 - **apps/web** — Next.js 15 + React 19 + tRPC v11 + Prisma (SQLite, Postgres‑ready) + Auth.js (JWT). Working.
 - **apps/mobile** — Expo SDK 53 / React Native 0.79 / expo-router v5. Reuses the shared tRPC API **types**, validators, and `@workshop/core`. Built, typechecks, bundles.
 - **packages/**: `api` (tRPC routers/services), `auth` (Auth.js + mobile JWT), `core` (constants/env/money/permissions/errors), `db` (Prisma), `validators` (Zod), `ui` (web design tokens).
 
-## Current machine / location
-Working on **`D:\WORK\inventory-workshop`** (personal Windows PC that has **Android Studio + Flutter**, so Android SDK + JDK 17 are present). Android SDK at `C:\Users\Guna\AppData\Local\Android\Sdk`.
+## Machines / locations
+- **Work PC (current):** `c:\New folder\3d-inventory` (git user `gunapathi-selvam`). Node 24
+  installed (use the `EXPO_NO_DEPENDENCY_VALIDATION=1` workaround for Expo, or install Node 20).
+- **Personal PC:** `D:\WORK\inventory-workshop` — has **Android Studio + Flutter** (Android SDK +
+  JDK 17). Android SDK at `C:\Users\Guna\AppData\Local\Android\Sdk`. This is the machine set up for
+  the mobile/device work.
+- Both are kept in sync via git; the dev DB (`packages/db/prisma/dev.db`) is gitignored and rebuilt
+  per machine with `pnpm db:push` + `pnpm db:seed` (or copied manually to keep hand-entered data).
 
 ## Decision log (important)
 - **Stay on React Native, NOT Flutter.** Reason: the whole point of the monorepo is the shared, type‑safe TypeScript layer (tRPC types, validators, core). Flutter = Dart rewrite, no tRPC reuse, two‑language maintenance, and it would NOT fix the real blocker (dev‑time device connectivity).
@@ -179,5 +206,8 @@ New-NetFirewallRule -DisplayName "Metro 8081"    -Direction Inbound -Protocol TC
 - Emulator API URL = `http://10.0.2.2:3000`; physical phone over Wi‑Fi = `http://<PC-LAN-IP>:3000`; USB/wireless+adb reverse = `http://localhost:3000`.
 - Local APK doc: `apps/mobile/BUILD_ANDROID.md`. Security: `SECURITY.md`. Mobile README: `apps/mobile/README.md`.
 
-## Open question for the next chat
-"Failed to download remote update" in Expo Go = the phone can't pull the bundle from the PC. Resolve via adb reverse (USB/wireless) or EAS. If a NEW error appears after the bundle loads, it'll show in the **Metro terminal** and on the device via the ErrorBoundary — capture that text.
+## For the next chat
+No blocking issues open. See **CURRENT STATUS** at the top for state + suggested next steps. The
+once-blocking dev-on-device problem is solved (see "DEV-ON-DEVICE: SOLVED"). When picking up new
+work, also check the auto-memory (`MEMORY.md`) — notably `deferred-rsc-refactor` (remaining
+form pages) and the mobile setup notes.
