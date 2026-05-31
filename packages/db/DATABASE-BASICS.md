@@ -1,17 +1,22 @@
-# Database basics — start here (plain English)
+# Database guide (plain English)
 
 You don't need to know anything about databases to use this. This page explains the few
 words you'll see, then gives you **copy-paste recipes**: find your situation, run the
-command, done. For the deep technical version see [DATABASE.md](DATABASE.md).
+command, done.
+
+> Just want the bare steps with no explanation? See **[DATABASE-STEPS.md](DATABASE-STEPS.md)**.
 
 ---
 
 ## The 4 words you need
 
 - **Database** — the app's filing cabinet where all data lives (users, orders, customers…).
-  On your machine it's a single file: `packages/db/prisma/dev.db`. It is **personal to
-  your computer** and is *not* shared through git — so a freshly downloaded copy of the
-  project starts with an **empty** cabinet.
+  This project uses **Postgres**, which runs in **Docker** on your machine (one command
+  starts it — see Recipe 1). Your data is **personal to your computer** and is *not* shared
+  through git — so a freshly downloaded copy of the project starts with an **empty** cabinet.
+- **Docker** — a tool that runs the Postgres database for you in a self-contained box, so you
+  don't have to install Postgres by hand. `docker compose up -d` starts it; it keeps running
+  in the background.
 - **Schema** — the *shape* of the drawers (what fields an order has, etc.). It's described
   in `schema.prisma`. This *does* travel through git.
 - **Seed** — filling a fresh cabinet with **fake sample data** (demo users, demo orders)
@@ -34,12 +39,16 @@ Fix — run these from the project's main folder, in order:
 
 ```powershell
 pnpm install
-pnpm run setup:env     # only the first time ever on this machine
+pnpm run setup:env      # only the first time ever on this machine
+docker compose up -d    # start the Postgres database (needs Docker Desktop running)
 pnpm db:generate
 pnpm db:migrate         # builds the cabinet AND fills it with sample data
 ```
 
 Then start the app (`pnpm dev`). Log in with `admin@workshop.local` / `admin123`.
+
+> First time with Docker? Install **Docker Desktop**, open it once so it's running, then
+> the `docker compose up -d` line works. You only `up -d` once per session — it stays up.
 
 ---
 
@@ -89,6 +98,23 @@ Manual price-override password: `override123`.
 
 ---
 
+## Recipe 5 — "I want to look at the data in DBeaver"
+
+Make sure Postgres is running (`docker compose up -d`), then add a connection in DBeaver:
+
+| Field    | Value       |
+|----------|-------------|
+| Host     | `localhost` |
+| Port     | `5432`      |
+| Database | `workshop`  |
+| Username | `workshop`  |
+| Password | `workshop`  |
+
+(These come from `docker-compose.yml`.) `pnpm db:studio` also opens a simple browser-based
+viewer with no setup.
+
+---
+
 ## 🚨 The production warning (read once)
 
 "Production" means the **real, live app** that real users use, with real data. It is a
@@ -111,14 +137,47 @@ your own laptop is safe to experiment with.
 
 ---
 
+## For whoever deploys the live app (the technical bit)
+
+You don't need this for local work — it's here so it isn't lost. The safe way to update a
+**production** Postgres database:
+
+```bash
+# 1. BACK UP FIRST
+pg_dump "$DATABASE_URL" > backup-$(date +%F).sql
+
+# 2. Apply schema changes via migrations — NEVER `migrate reset`, NEVER `db push`
+pnpm --filter @workshop/db exec prisma migrate deploy
+
+# 3. (Optional) refresh permission rules + settings only — safe, never inserts demo data
+NODE_ENV=production pnpm db:seed
+```
+
+Why step 3 is safe: in production the seed skips all demo users/orders and only *upserts*
+the permission matrix and settings (adds new permission keys, preserves admin edits).
+That's the `SEED_DEMO` gate in `prisma/seed.ts` — it's why production "never resets to
+dummy data."
+
+**Production don'ts:** `prisma migrate reset`, `prisma db push --force-reset`, or running
+the seed without `NODE_ENV=production`. And always migrate behind a backup.
+
+First production deploy from a brand-new empty Postgres just runs `migrate deploy`. If
+you're adopting migrations on an **existing** prod DB that predates them, baseline it once
+with `prisma migrate resolve --applied <migration_folder_name>` so it doesn't try to
+recreate existing tables.
+
+---
+
 ## Cheat sheet
 
 | I want to… | Run |
 |------------|-----|
-| Set up a brand-new copy | `pnpm db:generate` then `pnpm db:migrate` |
+| Start the database | `docker compose up -d` |
+| Set up a brand-new copy | `pnpm run setup:env`, `docker compose up -d`, `pnpm db:generate`, `pnpm db:migrate` |
 | Fix a broken/weird local DB | `pnpm --filter @workshop/db exec prisma migrate reset` |
 | Catch up after `git pull` | `pnpm db:generate` then `pnpm db:migrate` |
-| Look at the data in a GUI | `pnpm db:studio` |
+| Look at the data in a GUI | `pnpm db:studio` (or DBeaver — Recipe 5) |
+| Stop the database | `docker compose stop` |
 
 When in doubt on your own machine: **Recipe 2 (reset)** fixes almost anything.
 On production: don't reset — read the warning box and ask for help.

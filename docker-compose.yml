@@ -1,0 +1,32 @@
+# Local Postgres for development/testing.
+#
+# Start it:   docker compose up -d
+# Stop it:    docker compose stop
+# Wipe it:    docker compose down -v   (deletes the data volume too)
+#
+# Connection string (already what scripts/setup-env.mjs writes):
+#   postgresql://workshop:workshop@localhost:5432/workshop?schema=public
+#
+# Browse it in DBeaver with: host localhost, port 5432, db workshop,
+# user workshop, password workshop.
+services:
+  postgres:
+    image: postgres:16
+    container_name: workshop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: workshop
+      POSTGRES_PASSWORD: workshop
+      POSTGRES_DB: workshop
+    ports:
+      - "5432:5432"
+    volumes:
+      - workshop-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workshop -d workshop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  workshop-pgdata:

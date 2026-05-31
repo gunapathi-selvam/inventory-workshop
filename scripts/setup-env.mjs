@@ -1,13 +1,13 @@
 /**
  * Generates the local .env files for THIS machine.
  *
- * The SQLite DATABASE_URL must be an absolute path so the same DB file resolves
- * from both the Prisma CLI (cwd = packages/db) and the Next.js runtime (cwd =
- * apps/web). This script computes that path from the repo location, so moving
- * the project to a new machine just needs: `pnpm run setup:env`.
+ * DATABASE_URL points at Postgres. The default is the local Docker Postgres from
+ * docker-compose.yml (`docker compose up -d`). If you already set a different
+ * DATABASE_URL (e.g. a hosted Postgres), a re-run PRESERVES it — it only fills in
+ * the default when none is set yet (or the old SQLite `file:` URL is still there).
  *
- * It preserves an existing AUTH_SECRET if one is already present (so sessions
- * survive re-runs); otherwise it generates a strong random one.
+ * It also preserves an existing AUTH_SECRET if present (so sessions survive
+ * re-runs); otherwise it generates a strong random one.
  */
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -15,8 +15,9 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dbFile = join(root, "packages", "db", "prisma", "dev.db").replace(/\\/g, "/");
-const databaseUrl = `file:${dbFile}`;
+
+// Default local Postgres — matches docker-compose.yml. `docker compose up -d` first.
+const DEFAULT_DATABASE_URL = "postgresql://workshop:workshop@localhost:5432/workshop?schema=public";
 
 const webEnvPath = join(root, "apps", "web", ".env.local");
 const dbEnvPath = join(root, "packages", "db", ".env");
@@ -30,6 +31,11 @@ function readVar(path, key) {
   if (!line) return undefined;
   return line.slice(key.length + 1).replace(/^["']|["']$/g, "");
 }
+
+// Preserve an existing custom Postgres URL; replace the old SQLite `file:` URL or fill the default.
+const existingDbUrl = readVar(webEnvPath, "DATABASE_URL") ?? readVar(dbEnvPath, "DATABASE_URL");
+const databaseUrl =
+  existingDbUrl && !existingDbUrl.startsWith("file:") ? existingDbUrl : DEFAULT_DATABASE_URL;
 
 const authSecret =
   readVar(webEnvPath, "AUTH_SECRET") && readVar(webEnvPath, "AUTH_SECRET") !== "change-me"
@@ -60,4 +66,4 @@ console.log("Wrote env files for this machine:");
 console.log(`  ${dbEnvPath}`);
 console.log(`  ${webEnvPath}`);
 console.log(`DATABASE_URL = ${databaseUrl}`);
-console.log(existsSync(dbFile) ? "DB file found ✓" : "DB file NOT found — run `pnpm db:push && pnpm db:seed`");
+console.log("Next: `docker compose up -d` (start Postgres), then `pnpm db:migrate` (creates tables + seeds).");
