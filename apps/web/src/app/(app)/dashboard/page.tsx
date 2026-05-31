@@ -1,25 +1,10 @@
-"use client";
 import * as React from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { IndianRupee, TrendingUp, ShoppingCart, AlertTriangle, Boxes } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Badge,
-  PageHeader,
-  Skeleton,
-} from "@workshop/ui";
-import { api } from "~/trpc/react";
+import { Card, CardContent, CardHeader, CardTitle, Badge, PageHeader } from "@workshop/ui";
+import { getServerApi } from "~/trpc/server";
 import { money, dateShort, STATUS_VARIANT } from "~/lib/format";
-
-// recharts is heavy and only used here — load it lazily, client-only.
-const DashboardCharts = dynamic(() => import("./charts"), {
-  ssr: false,
-  loading: () => <Skeleton className="h-72" />,
-});
+import DashboardChartsClient from "./charts-client";
 
 function Kpi({
   icon,
@@ -47,22 +32,9 @@ function Kpi({
   );
 }
 
-export default function DashboardPage() {
-  const { data, isLoading } = api.dashboard.stats.useQuery({ days: 30 });
-
-  if (isLoading || !data) {
-    return (
-      <>
-        <PageHeader title="Dashboard" description="Last 30 days" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" />
-          ))}
-        </div>
-        <Skeleton className="h-72" />
-      </>
-    );
-  }
+export default async function DashboardPage() {
+  const api = await getServerApi();
+  const data = await api.dashboard.stats({ days: 30 });
 
   const trend = data.trend.map((t) => ({
     date: t.date.slice(5),
@@ -97,7 +69,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <DashboardCharts trend={trend} statusData={statusData} />
+      <DashboardChartsClient trend={trend} statusData={statusData} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

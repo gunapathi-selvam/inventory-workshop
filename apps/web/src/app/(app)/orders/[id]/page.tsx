@@ -1,17 +1,12 @@
-"use client";
-import * as React from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import {
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  Select,
-  Input,
-  Field,
   Badge,
   Table,
   THead,
@@ -19,51 +14,20 @@ import {
   TR,
   TH,
   TD,
-  Skeleton,
-  useToast,
 } from "@workshop/ui";
-import { ORDER_STATUS, PAYMENT_TYPE, type OrderStatus, type PaymentType } from "@workshop/core";
-import { api } from "~/trpc/react";
-import { useCan, useSession } from "~/lib/permissions-context";
+import type { PaymentType } from "@workshop/core";
+import { getServerApi, getServerUser } from "~/trpc/server";
 import { money, dateTime, STATUS_VARIANT } from "~/lib/format";
-import { mutationToast } from "~/lib/hooks";
+import { OrderStatusSelect, FulfillmentForm } from "./order-actions";
 
-export default function OrderDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const toast = useToast();
-  const utils = api.useUtils();
-  const canChange = useCan("orders.changeStatus");
-  const isAdmin = useSession().role === "ADMIN";
-
-  const { data, isLoading } = api.order.byId.useQuery({ id });
-  const changeStatus = api.order.changeStatus.useMutation(
-    mutationToast(toast, { success: "Status updated", error: "Could not update", onDone: () => utils.order.byId.invalidate({ id }) }),
-  );
-
-  const [fulfillment, setFulfillment] = React.useState({
-    deliveryDate: "",
-    paymentType: "" as PaymentType | "",
-    courierName: "",
-    trackingId: "",
-    trackingUrl: "",
-  });
-  React.useEffect(() => {
-    if (data) {
-      setFulfillment({
-        deliveryDate: data.deliveryDate ? String(data.deliveryDate).slice(0, 10) : "",
-        paymentType: (data.paymentType as PaymentType) ?? "",
-        courierName: data.courierName ?? "",
-        trackingId: data.trackingId ?? "",
-        trackingUrl: data.trackingUrl ?? "",
-      });
-    }
-  }, [data]);
-
-  const setFulfill = api.order.setFulfillment.useMutation(
-    mutationToast(toast, { success: "Fulfillment saved", error: "Could not save", onDone: () => utils.order.byId.invalidate({ id }) }),
-  );
-
-  if (isLoading || !data) return <Skeleton className="h-96" />;
+export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const api = await getServerApi();
+  const [data, user] = await Promise.all([
+    api.order.byId({ id }).catch(() => notFound()),
+    getServerUser(),
+  ]);
+  const isAdmin = user?.role === "ADMIN";
 
   return (
     <>
@@ -73,22 +37,7 @@ export default function OrderDetailPage() {
             <ArrowLeft className="size-4" /> Orders
           </Button>
         </Link>
-        {canChange && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Status</span>
-            <Select
-              className="w-40"
-              value={data.status}
-              onChange={(e) => changeStatus.mutate({ id, status: e.target.value as OrderStatus })}
-            >
-              {ORDER_STATUS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
+        <OrderStatusSelect id={id} status={data.status} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -148,7 +97,10 @@ export default function OrderDetailPage() {
             <CardContent className="flex flex-col gap-1.5 text-sm">
               <Row label="Subtotal" value={money(data.subtotal)} />
               {data.discountAmount > 0 && (
-                <Row label={`Discount${data.discountCode ? ` (${data.discountCode.code})` : ""}`} value={`- ${money(data.discountAmount)}`} />
+                <Row
+                  label={`Discount${data.discountCode ? ` (${data.discountCode.code})` : ""}`}
+                  value={`- ${money(data.discountAmount)}`}
+                />
               )}
               <div className="my-1 border-t border-border" />
               <Row label="Total" value={money(data.total)} bold />
@@ -166,78 +118,16 @@ export default function OrderDetailPage() {
               <CardTitle className="text-base">Fulfillment</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              {data.trackingId && data.trackingUrl && (
-                <a
-                  href={data.trackingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                >
-                  Track {data.trackingId} <ExternalLink className="size-3" />
-                </a>
-              )}
-              <Field label="Delivery date">
-                <Input
-                  type="date"
-                  disabled={!canChange}
-                  value={fulfillment.deliveryDate}
-                  onChange={(e) => setFulfillment({ ...fulfillment, deliveryDate: e.target.value })}
-                />
-              </Field>
-              <Field label="Payment type">
-                <Select
-                  disabled={!canChange}
-                  value={fulfillment.paymentType}
-                  onChange={(e) => setFulfillment({ ...fulfillment, paymentType: e.target.value as PaymentType | "" })}
-                >
-                  <option value="">—</option>
-                  {PAYMENT_TYPE.map((p) => (
-                    <option key={p} value={p}>
-                      {p.replace("_", " ")}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Courier">
-                <Input
-                  disabled={!canChange}
-                  value={fulfillment.courierName}
-                  onChange={(e) => setFulfillment({ ...fulfillment, courierName: e.target.value })}
-                  placeholder="DTDC, India Post…"
-                />
-              </Field>
-              <Field label="Tracking ID">
-                <Input
-                  disabled={!canChange}
-                  value={fulfillment.trackingId}
-                  onChange={(e) => setFulfillment({ ...fulfillment, trackingId: e.target.value })}
-                />
-              </Field>
-              <Field label="Tracking URL">
-                <Input
-                  disabled={!canChange}
-                  value={fulfillment.trackingUrl}
-                  onChange={(e) => setFulfillment({ ...fulfillment, trackingUrl: e.target.value })}
-                  placeholder="https://…"
-                />
-              </Field>
-              {canChange && (
-                <Button
-                  loading={setFulfill.isPending}
-                  onClick={() =>
-                    setFulfill.mutate({
-                      id,
-                      deliveryDate: fulfillment.deliveryDate ? new Date(fulfillment.deliveryDate) : null,
-                      paymentType: fulfillment.paymentType || null,
-                      courierName: fulfillment.courierName || null,
-                      trackingId: fulfillment.trackingId || null,
-                      trackingUrl: fulfillment.trackingUrl || null,
-                    })
-                  }
-                >
-                  Save fulfillment
-                </Button>
-              )}
+              <FulfillmentForm
+                id={id}
+                init={{
+                  trackingId: data.trackingId,
+                  trackingUrl: data.trackingUrl,
+                  deliveryDate: data.deliveryDate ? new Date(data.deliveryDate).toISOString().slice(0, 10) : "",
+                  paymentType: (data.paymentType as PaymentType) ?? "",
+                  courierName: data.courierName ?? "",
+                }}
+              />
             </CardContent>
           </Card>
 

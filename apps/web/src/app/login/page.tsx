@@ -8,7 +8,7 @@ import { loginSchema, type LoginInput } from "@workshop/validators";
 import { Button, Card, CardContent, CardHeader, CardTitle, Field, Input, useToast } from "@workshop/ui";
 import { Boxes } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
@@ -59,5 +59,14 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary for prerendering.
+export default function LoginPage() {
+  return (
+    <React.Suspense>
+      <LoginForm />
+    </React.Suspense>
   );
 }

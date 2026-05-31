@@ -1,8 +1,6 @@
-"use client";
-import * as React from "react";
-import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,17 +13,15 @@ import {
   TR,
   TH,
   TD,
-  Skeleton,
   Button,
 } from "@workshop/ui";
-import { api } from "~/trpc/react";
+import { getServerApi } from "~/trpc/server";
 import { dateTime } from "~/lib/format";
 
-export default function FilamentDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const { data, isLoading } = api.filament.byId.useQuery({ id });
-
-  if (isLoading || !data) return <Skeleton className="h-72" />;
+export default async function FilamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const api = await getServerApi();
+  const data = await api.filament.byId({ id }).catch(() => notFound());
 
   return (
     <>

@@ -62,6 +62,8 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router;
 export const middleware = t.middleware;
 export const publicProcedure = t.procedure;
+/** Build a server-side caller (used by RSC pages to fetch via the router directly). */
+export const createCallerFactory = t.createCallerFactory;
 
 /** Translate thrown AppErrors into TRPCErrors so the formatter can read them. */
 const errorBoundary = middleware(async ({ next }) => {

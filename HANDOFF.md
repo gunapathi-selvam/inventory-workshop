@@ -76,6 +76,34 @@ Whole-app pass, landed safest-first; both apps typecheck clean and a backend smo
 - **Deferred:** converting web list/dashboard pages to React Server Components (faster first load)
   — left for a future scoped update (see the `deferred-rsc-refactor` memory).
 
+## Web RSC refactor (2026‑05‑31 session) — read-dominant pages
+Converted the read-dominant web pages from client react-query pages into **React Server
+Components** that fetch on the server and render static markup, with small **client islands** for
+interactivity. `pnpm --filter @workshop/web build` now passes (17/17 pages); migrated pages show as
+`ƒ (Dynamic) server-rendered on demand`.
+- **Server caller:** `apps/web/src/trpc/server.ts` exports `getServerApi()` (a cached
+  `createCallerFactory(appRouter)` over `createContext()`) and `getServerUser()`. Server pages call
+  `const api = await getServerApi(); const data = await api.x.y(...)`. `createCallerFactory` is now
+  exported from `@workshop/api`.
+- **Migrated:** dashboard, inventory/[id], orders/[id], notifications, settings/audit-log, orders
+  list, customers list, inventory list. Detail pages use `notFound()` on a missing record.
+- **Patterns:** list filters/search/pagination now live in **URL `searchParams`** (client islands
+  call `router.replace`); CRUD mutations call `router.refresh()` instead of
+  `utils.invalidate()`; `useCan()` still works in islands (PermissionsProvider is a client provider
+  in `(app)/layout.tsx`). Charts use a client wrapper because `next/dynamic({ssr:false})` can't live
+  in a server component.
+- **Left as client (intentionally):** orders/new, settings/access-control, settings/fields (heavy
+  forms / `useSearchParams`-driven; low RSC value).
+
+### Two pre-existing build blockers fixed (the production build never worked before)
+- **Single React pin:** `react`/`react-dom` are pinned to **19.0.0** via `pnpm.overrides` in the
+  root `package.json`. The web app had drifted to 19.2.6 while RN/root stayed at 19.0.0 (React
+  Native 0.79 requires 19.0.0), so Next prerendered its error pages against a mismatched React →
+  `Cannot read properties of null (reading 'useRef')`. **Do not** bump react past 19.0.0 unless RN
+  also supports it. After changing this, `pnpm install`.
+- **/login Suspense:** the login page reads `useSearchParams()` and is now wrapped in
+  `<Suspense>` (Next requires it for prerendering).
+
 ## Monorepo build gotchas (don't regress these)
 - **`.npmrc` uses `node-linker=hoisted`** — required for Metro/Expo under pnpm. Don't switch back to isolated.
 - **`apps/mobile/metro.config.js`** has a custom resolver mapping relative `*.js` imports → `.ts` sources (the shared packages use ESM `.js` specifiers).

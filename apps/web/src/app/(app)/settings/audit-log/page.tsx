@@ -1,57 +1,44 @@
-"use client";
-import * as React from "react";
-import {
-  Card,
-  CardContent,
-  Input,
-  Table,
-  THead,
-  TBody,
-  TR,
-  TH,
-  TD,
-  Badge,
-  EmptyState,
-  Skeleton,
-  Button,
-} from "@workshop/ui";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Card, CardContent, Table, THead, TBody, TR, TH, TD, Badge, EmptyState } from "@workshop/ui";
 import { titleCase } from "@workshop/core";
-import { api } from "~/trpc/react";
+import { getServerApi } from "~/trpc/server";
 import { dateTime } from "~/lib/format";
-import { DateRangeFilter, rangeToApi, type DateRangeValue } from "~/components/date-range";
-import { useDebouncedValue } from "~/lib/hooks";
+import { AuditFilters } from "./audit-filters";
 
-export default function AuditLogPage() {
-  const [search, setSearch] = React.useState("");
-  const [range, setRange] = React.useState<DateRangeValue>({});
-  const [page, setPage] = React.useState(1);
-  const debounced = useDebouncedValue(search, 300);
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-  // Reset to the first page whenever the filters change.
-  React.useEffect(() => setPage(1), [debounced, range]);
+export default async function AuditLogPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
+  const search = str("q");
+  const from = str("from");
+  const to = str("to");
+  const page = Math.max(1, Number(str("page")) || 1);
 
-  const list = api.audit.list.useQuery({
+  const api = await getServerApi();
+  const data = await api.audit.list({
     page,
     pageSize: 50,
-    search: debounced || undefined,
-    ...rangeToApi(range),
+    search,
+    dateFrom: from ? new Date(from) : undefined,
+    dateTo: to ? new Date(to) : undefined,
   });
+
+  const hrefFor = (p: number) => {
+    const q = new URLSearchParams();
+    if (search) q.set("q", search);
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    if (p > 1) q.set("page", String(p));
+    return `?${q.toString()}`;
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          placeholder="Search action, entity or id…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-        <DateRangeFilter value={range} onChange={setRange} />
-      </div>
+      <AuditFilters />
 
-      {list.isLoading ? (
-        <Skeleton className="h-64" />
-      ) : !list.data || list.data.items.length === 0 ? (
+      {data.items.length === 0 ? (
         <EmptyState title="No audit entries" description="Nothing matches the current filters yet." />
       ) : (
         <Card>
@@ -67,7 +54,7 @@ export default function AuditLogPage() {
                 </TR>
               </THead>
               <TBody>
-                {list.data.items.map((a) => (
+                {data.items.map((a) => (
                   <TR key={a.id}>
                     <TD className="whitespace-nowrap text-muted-foreground">{dateTime(a.createdAt)}</TD>
                     <TD>{a.user?.name ?? "System"}</TD>
@@ -82,27 +69,32 @@ export default function AuditLogPage() {
             </Table>
 
             <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-              <span>{list.data.total} entries</span>
+              <span>{data.total} entries</span>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <PagerLink href={hrefFor(page - 1)} disabled={page <= 1}>
                   Prev
-                </Button>
+                </PagerLink>
                 <span>
-                  Page {page} / {list.data.pageCount}
+                  Page {page} / {data.pageCount}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= list.data.pageCount}
-                  onClick={() => setPage((p) => p + 1)}
-                >
+                <PagerLink href={hrefFor(page + 1)} disabled={page >= data.pageCount}>
                   Next
-                </Button>
+                </PagerLink>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
     </div>
+  );
+}
+
+function PagerLink({ href, disabled, children }: { href: string; disabled: boolean; children: ReactNode }) {
+  const cls = "rounded-md border border-border px-3 py-1.5 text-sm";
+  if (disabled) return <span className={`${cls} opacity-50`}>{children}</span>;
+  return (
+    <Link href={href} className={`${cls} hover:bg-muted`}>
+      {children}
+    </Link>
   );
 }
