@@ -1,5 +1,8 @@
 # Database, seeding & safe-update guide
 
+> 👋 **Not a backend developer?** Read [DATABASE-BASICS.md](DATABASE-BASICS.md) instead —
+> it's plain-English copy-paste recipes. This page is the detailed technical reference.
+
 How the Workshop database is created, seeded, and **safely updated** — especially
 the difference between a throwaway **dev** DB (seed = dummy data, fine to wipe) and
 a **production** DB (real data, must never be reset).
