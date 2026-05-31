@@ -137,6 +137,68 @@ your own laptop is safe to experiment with.
 
 ---
 
+## Switching databases & moving your data (SQLite ⇄ Postgres)
+
+**Your data does NOT move automatically.** SQLite and Postgres are different engines —
+you can't copy the database file across. To switch without losing anything you **export**
+the data to a file, then **import** it into the other database. We have a tool for that:
+`pnpm db:export` and `pnpm db:import` (works in both directions).
+
+### Which engine am I on?
+
+It's decided by the **branch** (because the engine is written into `schema.prisma`):
+
+| Branch | Engine | Setup |
+|--------|--------|-------|
+| `main` | **SQLite** (a local file, no Docker) | `pnpm run setup:env`, `pnpm db:generate`, `pnpm db:migrate` |
+| `feature/postgres-local` | **Postgres** (via Docker) | `pnpm run setup:env`, `docker compose up -d`, `pnpm db:generate`, `pnpm db:migrate` |
+
+So "set up on both" = each branch already carries its own correct setup. You don't edit
+config by hand; switching branch + running its setup is the switch.
+
+### Move data SQLite → Postgres (no loss)
+
+```powershell
+# 1. On SQLite (main branch) — save your current data to a file:
+pnpm db:export                       # -> packages/db/prisma/data-backup.json
+
+# 2. Switch to the Postgres branch and create empty Postgres tables:
+git checkout feature/postgres-local
+pnpm install
+pnpm run setup:env
+docker compose up -d
+pnpm db:generate
+pnpm db:migrate                      # tables created (will also seed demo rows — see note)
+
+# 3. Load your saved data into Postgres:
+pnpm db:import                       # reads packages/db/prisma/data-backup.json
+```
+
+> The `data-backup.json` file stays on your disk between steps (it's git-ignored, so it
+> won't be committed). It carries your real rows from the old DB to the new one.
+
+### Move data Postgres → SQLite (no loss)
+
+Exactly the same three steps with the setups swapped:
+
+```powershell
+# 1. On Postgres: pnpm db:export
+# 2. git checkout main; pnpm install; pnpm run setup:env; pnpm db:generate; pnpm db:migrate
+# 3. On SQLite: pnpm db:import
+```
+
+### Two safety notes (so you never lose data)
+
+1. **Import wants an EMPTY target.** `pnpm db:migrate` on a fresh DB may also add demo
+   sample rows. If you only want *your* data, clear it first with
+   `pnpm --filter @workshop/db exec prisma migrate reset` (answer `y`), then `pnpm db:import`.
+   Importing into a non-empty DB double-inserts.
+2. **Always export BEFORE you switch.** The export file is your backup. Keep a copy
+   somewhere safe until you've confirmed the new database looks right (check it in DBeaver
+   or `pnpm db:studio`).
+
+---
+
 ## For whoever deploys the live app (the technical bit)
 
 You don't need this for local work — it's here so it isn't lost. The safe way to update a

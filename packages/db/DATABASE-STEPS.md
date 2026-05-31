@@ -81,6 +81,10 @@ pnpm db:generate
 pnpm db:migrate
 ```
 
+**Moving your data between SQLite and Postgres (without losing it):**
+See **[DATABASE-BASICS.md](DATABASE-BASICS.md) → "Switching databases & moving your data"**.
+Short version: `pnpm db:export` on the old one, switch, then `pnpm db:import` on the new one.
+
 ---
 
 > 🚨 These commands are for **your own computer**. Never run `migrate reset` against the

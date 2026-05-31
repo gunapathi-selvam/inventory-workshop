@@ -1,9 +1,11 @@
 // Workshop data model.
 //
-// DB-portability: provider is SQLite now. To move to Postgres later, change
-// `provider` to "postgresql" and point DATABASE_URL at the new database — no
-// model changes required (we avoid SQLite-only features and store enums as
-// strings validated by @workshop/core constants, money as integer minor units).
+// DB-portability: provider is Postgres. It also runs on SQLite (the `main` branch)
+// with zero model changes — we avoid engine-specific features and store enums as
+// strings validated by @workshop/core constants, money as integer minor units.
+// To switch engines, change `provider` + DATABASE_URL and regenerate the migration;
+// to MOVE DATA between engines without loss, use `pnpm db:export` / `db:import`
+// (see packages/db/DATABASE-BASICS.md -> "Switching databases & moving your data").
 //
 // Conventions:
 //   * Every record table has createdAt / updatedAt and a soft-delete deletedAt.

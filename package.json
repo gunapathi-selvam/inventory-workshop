@@ -16,6 +16,8 @@
     "db:migrate": "pnpm --filter @workshop/db migrate",
     "db:push": "pnpm --filter @workshop/db push",
     "db:seed": "pnpm --filter @workshop/db seed",
+    "db:export": "pnpm --filter @workshop/db export",
+    "db:import": "pnpm --filter @workshop/db import",
     "db:studio": "pnpm --filter @workshop/db studio",
     "setup:env": "node scripts/setup-env.mjs",
     "setup": "pnpm install && pnpm run setup:env && pnpm db:generate && pnpm db:push && pnpm db:seed"

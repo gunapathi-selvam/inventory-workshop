@@ -13,6 +13,8 @@
     "migrate": "prisma migrate dev",
     "push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
+    "export": "tsx prisma/transfer.ts export",
+    "import": "tsx prisma/transfer.ts import",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit"
   },

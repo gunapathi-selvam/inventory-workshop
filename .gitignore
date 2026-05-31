@@ -25,6 +25,9 @@ dist/
 *.sqlite3
 packages/db/prisma/*.db
 
+# data dumps from `pnpm db:export` (may contain real data — keep out of git)
+packages/db/prisma/data-backup.json
+
 # misc
 .DS_Store
 *.log
