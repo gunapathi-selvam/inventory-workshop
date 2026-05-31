@@ -197,6 +197,31 @@ Exactly the same three steps with the setups swapped:
    somewhere safe until you've confirmed the new database looks right (check it in DBeaver
    or `pnpm db:studio`).
 
+### Check the export/import works first (safe — won't touch your real data)
+
+A full round-trip on Postgres only, so nothing on your SQLite (`main`) side is touched.
+Do this on a machine with **Docker**. Run each line one at a time:
+
+```powershell
+# Setup (Postgres branch + Docker)
+git checkout feature/postgres-local
+pnpm install
+pnpm run setup:env
+docker compose up -d
+pnpm db:generate
+pnpm db:migrate          # creates tables + demo sample data
+
+# The actual test
+pnpm db:export           # prints counts (e.g. "exported 3 user") -> WRITE THESE DOWN
+pnpm --filter @workshop/db exec prisma migrate reset --skip-seed   # empties tables, answer y
+pnpm db:import           # should print the SAME counts ("imported 3 user" ...)
+pnpm db:studio           # open the viewer and confirm the rows are there
+```
+
+**It works if:** the import counts match the export counts, and `db:studio` (or the app)
+shows the data after the import. If a count is 0 or you see an error, that's the signal
+something needs fixing.
+
 ---
 
 ## For whoever deploys the live app (the technical bit)

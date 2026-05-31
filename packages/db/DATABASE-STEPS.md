@@ -87,5 +87,28 @@ Short version: `pnpm db:export` on the old one, switch, then `pnpm db:import` on
 
 ---
 
+## Test the export/import works (safe — won't touch your real data)
+
+A Postgres-only round-trip, so your SQLite data is never touched. Needs **Docker**. Run
+each line one at a time:
+
+```powershell
+git checkout feature/postgres-local
+pnpm install
+pnpm run setup:env
+docker compose up -d
+pnpm db:generate
+pnpm db:migrate          # tables + demo sample data
+
+pnpm db:export           # prints counts (e.g. "exported 3 user") — write them down
+pnpm --filter @workshop/db exec prisma migrate reset --skip-seed   # empties tables, answer y
+pnpm db:import           # should print the SAME counts
+pnpm db:studio           # open viewer, confirm the rows are there
+```
+
+**Works if** the import counts match the export counts and the rows show up in the viewer.
+
+---
+
 > 🚨 These commands are for **your own computer**. Never run `migrate reset` against the
 > real live app — it deletes real data. If unsure, ask. See **[DATABASE-BASICS.md](DATABASE-BASICS.md)**.
